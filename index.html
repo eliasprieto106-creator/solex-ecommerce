@@ -74,7 +74,6 @@
         }
         .btn-bid:hover { background-color: var(--accent-color); box-shadow: 0 0 15px rgba(255, 62, 62, 0.4); }
 
-        /* SECCIÓN DEL HISTORIAL EN LA CARTA */
         .history-box {
             margin-top: 15px;
             background-color: #0f0f12;
@@ -87,37 +86,35 @@
         .history-box h4 { margin: 0 0 8px 0; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; }
         .history-list { list-style: none; padding: 0; margin: 0; }
         .history-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1c1c22; }
-        .history-item:last-child { border-none; }
         .history-price { color: #00ff66; font-weight: bold; }
         .history-time { color: var(--text-muted); font-size: 0.75rem; }
     </style>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
     <header>
         <h1>SoleX<span>.</span></h1>
-        <p>The Sneaker Bid Exchange — Registros de Subastas Guardados en BD Remota</p>
+        <p>The Sneaker Bid Exchange — Historial y Ofertas Conectadas en Tiempo Real</p>
     </header>
 
     <div class="container">
         <div class="grid" id="sneakers-grid"></div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // =======================================================
-        // ⚠️ COLOCÁ TU LINK DE FIREBASE REALTIME ACÁ ABAJO ⚠️
-        // =======================================================
+    <script>
+        // Configuración apuntando directo a tu Firebase Elías
         const firebaseConfig = {
-            databaseURL: "TU_LINK_DE_FIREBASE_AQUÍ"
+            databaseURL: "https://solex-ecommerce-default-rtdb.firebaseio.com/"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // Datos iniciales estructurados como registros (Cátedra)
+        // Datos del Registro Cátedra sacados de tu Actividad Formativa N.° 2
         const productosIniciales = {
             "SLX-2026-AJ1-042": {
                 modelo: "Air Jordan 1 Retro High OG",
@@ -143,43 +140,29 @@
 
         const grid = document.getElementById('sneakers-grid');
 
-        // Escuchar base de datos completa (Productos + Historiales)
-        onValue(ref(db), (snapshot) => {
-            const baseDeDatosGlobal = snapshot.val() || {};
-            
-            // Si la rama de zapatillas está vacía, cargamos los datos base
-            if (!baseDeDatosGlobal.sneakers) {
-                set(ref(db, 'sneakers'), productosIniciales);
-                return;
-            }
-
-            const dataSneakers = baseDeDatosGlobal.sneakers;
-            const dataHistoriales = baseDeDatosGlobal.historial_pujas || {};
-
+        function renderizar(dataSneakers, dataHistoriales) {
             grid.innerHTML = "";
-
             for (const id in dataSneakers) {
                 const sneaker = dataSneakers[id];
-                
-                // Buscar y ordenar las pujas que correspondan a esta zapatilla en particular
-                const listaPujasHtml = [];
-                if (dataHistoriales[id]) {
-                    Object.values(dataHistoriales[id])
-                        .sort((a, b) => b.timestamp - a.timestamp) // Mostrar la última arriba
-                        .forEach(p => {
-                            listaPujasHtml.push(`
-                                <li class="history-item">
-                                    <span class="history-time">${p.hora}</span>
-                                    <span class="history-user">${p.usuario}</span>
-                                    <span class="history-price">US$ ${p.monto}</span>
-                                </li>
-                            `);
-                        });
+                let listaPujasHtml = "";
+
+                if (dataHistoriales && dataHistoriales[id]) {
+                    // Ordenamos las pujas por tiempo para ver la más reciente arriba de todo
+                    const ordenadas = Object.values(dataHistoriales[id]).sort((a, b) => b.timestamp - a.timestamp);
+                    ordenadas.forEach(p => {
+                        listaPujasHtml += `
+                            <li class="history-item">
+                                <span class="history-time">${p.hora}</span>
+                                <strong>${p.usuario}</strong>
+                                <span class="history-price">US$ ${p.monto}</span>
+                            </li>
+                        `;
+                    });
                 } else {
-                    listaPujasHtml.push(`<li class="history-item" style="color:var(--text-muted)">Sin pujas registradas</li>`);
+                    listaPujasHtml = `<li class="history-item" style="color:var(--text-muted)">Sin ofertas registradas</li>`;
                 }
 
-                const cardHtml = `
+                grid.innerHTML += `
                     <div class="card">
                         <div class="card-img-container">
                             <img src="${sneaker.imagen_url}" alt="${sneaker.modelo}">
@@ -195,53 +178,60 @@
                                 <div class="price-box">
                                     <p>US$ ${parseFloat(sneaker.precio_base).toFixed(2)}</p>
                                 </div>
-                                <button class="btn-bid" data-id="${id}" data-current="${sneaker.precio_base}">Pujar</button>
+                                <button class="btn-bid" onclick="hacerPuja('${id}', ${sneaker.precio_base})">Pujar</button>
                             </div>
                             <div class="history-box">
                                 <h4>📜 Historial de Ofertas Guardadas</h4>
-                                <ul class="history-list">${listaPujasHtml.join('')}</ul>
+                                <ul class="history-list">${listaPujasHtml}</ul>
                             </div>
                         </div>
                     </div>
                 `;
-                grid.innerHTML += cardHtml;
+            }
+        }
+
+        // Escuchar la base de datos de Firebase completa
+        db.ref().on('value', (snapshot) => {
+            const raiz = snapshot.val() || {};
+            
+            // Si tu Firebase está totalmente vacío, lo inicializamos con los registros base
+            if (!raiz.sneakers) {
+                db.ref('sneakers').set(productosIniciales);
+                return;
             }
 
-            // Configurar botones de acción
-            document.querySelectorAll('.btn-bid').forEach(button => {
-                button.addEventListener('click', () => {
-                    const id = button.getAttribute('data-id');
-                    const precioActual = parseFloat(button.getAttribute('data-current'));
-                    
-                    const nombre = prompt("Ingresá tu nombre/usuario para registrar la oferta:");
-                    if (!nombre) return;
-
-                    const nuevaOferta = prompt(`Precio actual US$ ${precioActual}. ¿Cuánto querés ofertar?:`);
-                    
-                    if (nuevaOferta && !isNaN(nuevaOferta) && parseFloat(nuevaOferta) > precioActual) {
-                        const montoNumerico = parseFloat(nuevaOferta);
-                        const ahora = new Date();
-                        const horaFormateada = ahora.toLocaleTimeString() + " (" + ahora.toLocaleDateString() + ")";
-
-                        // 1. Guardamos la oferta en la lista histórica de Firebase bajo la PK de la zapatilla
-                        const nuevoNodoHistorialRef = push(ref(db, `historial_pujas/${id}`));
-                        set(nuevoNodoHistorialRef, {
-                            usuario: nombre,
-                            monto: montoNumerico,
-                            hora: horaFormateada,
-                            timestamp: ahora.getTime()
-                        });
-
-                        // 2. Actualizamos el precio máximo de la zapatilla
-                        set(ref(db, `sneakers/${id}/precio_base`), montoNumerico);
-
-                        alert("¡Oferta procesada y registrada de por vida en la base de datos!");
-                    } else if (nuevaOferta) {
-                        alert("Monto inválido. Recordá que tiene que superar la oferta actual.");
-                    }
-                });
-            });
+            renderizar(raiz.sneakers, raiz.historial_pujas);
         });
+
+        // Función global para manejar las ofertas interactivas
+        window.hacerPuja = function(id, precioActual) {
+            const nombre = prompt("Ingresá tu nombre o alias para ofertar:");
+            if (!nombre) return;
+
+            const ofertaStr = prompt(`Precio actual US$ ${precioActual}. ¿Cuál es tu oferta?:`);
+            if (!ofertaStr) return;
+
+            const monto = parseFloat(ofertaStr);
+            if (!isNaN(monto) && monto > precioActual) {
+                const ahora = new Date();
+                const horaFormateada = ahora.toLocaleTimeString() + " (" + ahora.toLocaleDateString() + ")";
+
+                // 1. Añadimos un registro persistente e imborrable en el nodo historial_pujas
+                db.ref(`historial_pujas/${id}`).push({
+                    usuario: nombre,
+                    monto: monto,
+                    hora: horaFormateada,
+                    timestamp: ahora.getTime()
+                });
+
+                // 2. Modificamos el precio_base del registro principal
+                db.ref(`sneakers/${id}/precio_base`).set(monto);
+
+                alert("¡Oferta procesada y almacenada con éxito en el historial de tu base de datos!");
+            } else {
+                alert("Monto inválido. Debe ser mayor al precio actual.");
+            }
+        }
     </script>
 </body>
 </html>
