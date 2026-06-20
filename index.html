@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoleX — The Sneaker Bid Exchange</title>
+    <style>
+        /* ESTILOS GLOBALES - Estética Hypebeast/Modern */
+        :root {
+            --bg-color: #0b0b0b;
+            --card-bg: #16161a;
+            --accent-color: #ff3e3e;
+            --text-color: #ffffff;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid #2d2d34;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            letter-spacing: 2px;
+            color: var(--text-color);
+        }
+
+        header h1 span {
+            color: var(--accent-color);
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            background: #24242b;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* GRILLA DE PRODUCTOS */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        /* CARD BASADA EN EL REGISTRO "SNEAKER" */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #2d2d34;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .card-img-container {
+            background: radial-gradient(circle, #2a2a35 0%, #16161a 100%);
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .card-img-container img {
+            max-width: 80%;
+            max-height: 80%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+        }
+
+        .condition-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .pk-id {
+            font-family: monospace;
+            color: var(--accent-color);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .brand {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        .model-name {
+            margin: 5px 0 10px 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* CAMPOS CONTINENTES / DETALLES técnico del registro */
+        .technical-details {
+            background-color: #1c1c22;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+
+        .technical-details div {
+            margin-bottom: 4px;
+        }
+
+        .technical-details div:last-child {
+            margin-bottom: 0;
+        }
+
+        .technical-details strong {
+            color: #fff;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .price-box h4 {
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .price-box p {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00ff66;
+        }
+
+        /* ACCIONES */
+        .btn-bid {
+            background-color: transparent;
+            border: 2px solid var(--accent-color);
+            color: var(--text-color);
+            padding: 10px 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-bid:hover {
+            background-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(255, 62, 62, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>SoleX<span>.</span></h1>
+        <p>The Sneaker Bid Exchange — Subastas e Intercambios con Verificación IA</p>
+        <div class="badges">
+            <span class="badge">🔨 Subastas en vivo</span>
+            <span class="badge">🤖 Auth por IA</span>
+            <span class="badge">🔄 Hype Trade</span>
+            <span class="badge">📦 Escrow Seguro</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="grid" id="sneakers-grid"></div>
+    </div>
+
+    <script>
+        // Simulando la base de datos basándonos exactamente en la estructura de tu registro "Sneaker"
+        const sneakersDatabase = [
+            {
+                sneaker_id: "SLX-2026-AJ1-042", // Clave Primaria Simple
+                modelo: "Air Jordan 1 Retro High OG",
+                talle_us: 10.5,
+                precio_base: 350.00,
+                stock: 1,
+                condicion: "D", // Deadstock
+                fabricacion: { // Campo Continente
+                    marca: "Nike / Jordan",
+                    colorway: "Chicago Reimagined",
+                    anio_edicion: 2024
+                },
+                fecha_lanzamiento: { // Campo Continente
+                    dia: 19,
+                    mes: 11,
+                    anio: 2024
+                },
+                imagen_url: "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=500&auto=format&fit=crop&q=60" // Agregado para interfaz visual
+            },
+            {
+                sneaker_id: "SLX-2026-SB-088",
+                modelo: "Dunk Low Pro SB 'Panda'",
+                talle_us: 9.0,
+                precio_base: 120.00,
+                stock: 3,
+                condicion: "N", // Nuevo
+                fabricacion: {
+                    marca: "Nike SB",
+                    colorway: "Black/White",
+                    anio_edicion: 2023
+                },
+                fecha_lanzamiento: {
+                    dia: 10,
+                    mes: 3,
+                    anio: 2021
+                },
+                imagen_url: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=500&auto=format&fit=crop&q=60"
+            },
+            {
+                sneaker_id: "SLX-2026-YZ-700",
+                modelo: "Yeezy Boost 700 Wave Runner",
+                talle_us: 11.0,
+                precio_base: 410.00,
+                stock: 1,
+                condicion: "U", // Usado
+                fabricacion: {
+                    marca: "Adidas / Yeezy",
+                    colorway: "Solid Grey/Chalk White",
+                    anio_edicion: 2022
+                },
+                fecha_lanzamiento: {
+                    dia: 10,
+                    mes: 3,
+                    anio: 2018
+                },
+                imagen_url: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500&auto=format&fit=crop&q=60"
+            }
+        ];
+
+        // Función para mapear la condición (Carácter) a un texto legible
+        function getCondicionTexto(c) {
+            switch(c) {
+                case 'N': return 'Nuevo';
+                case 'U': return 'Usado';
+                case 'D': return 'Deadstock';
+                default: return 'No especificado';
+            }
+        }
+
+        // Renderizar dinámicamente las tarjetas en la página web
+        const grid = document.getElementById('sneakers-grid');
+
+        sneakersDatabase.forEach(sneaker => {
+            const cardHtml = `
+                <div class="card">
+                    <div class="card-img-container">
+                        <span class="condition-badge">${getCondicionTexto(sneaker.condicion)}</span>
+                        <img src="${sneaker.imagen_url}" alt="${sneaker.modelo}">
+                    </div>
+                    <div class="card-content">
+                        <div class="pk-id">PK: ${sneaker.sneaker_id}</div>
+                        <p class="brand">${sneaker.fabricacion.marca}</p>
+                        <h3 class="model-name">${sneaker.modelo}</h3>
+                        
+                        <div class="technical-details">
+                            <div><strong>Colorway:</strong> ${sneaker.fabricacion.colorway}</div>
+                            <div><strong>Talle US:</strong> ${sneaker.talle_us} | <strong>Stock:</strong> ${sneaker.stock}</div>
+                            <div><strong>Lanzamiento:</strong> ${sneaker.fecha_lanzamiento.dia}/${sneaker.fecha_lanzamiento.mes}/${sneaker.fecha_lanzamiento.anio} (Edición ${sneaker.fabricacion.anio_edicion})</div>
+                        </div>
+
+                        <div class="price-row">
+                            <div class="price-box">
+                                <h4>Oferta Mínima</h4>
+                                <p>US$ ${sneaker.precio_base.toFixed(2)}</p>
+                            </div>
+                            <button class="btn-bid" onclick="pujar('${sneaker.sneaker_id}')">Pujar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.innerHTML += cardHtml;
+        });
+
+        // Interacción simple simulada
+        function pujar(id) {
+            alert(`¡Acción de Puja Inicializada para el registro Clave Primaria: ${id}!\nEl sistema de IA de SoleX está verificando las credenciales de Escrow.`);
+        }
+    </script>
+</body>
+</html> 
